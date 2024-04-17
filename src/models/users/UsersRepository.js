@@ -1,42 +1,78 @@
+import db from "../../database/index.js"
+
 export default class UsersRepository {
   constructor() {
-    this.users = [];
+    this.db = db;
   }
 
-  getUsers() {
-    return this.users;
+  async getUsers() {
+    try {
+      const allUsers =  await this.db.manyOrNone("SELECT * FROM users");
+    //console.log(allUsers);
+    return allUsers;
+    } catch (error) {
+      console.log("Failed to get users:",  error);
+      throw error;
+    }
   }
 
-  getUserById(id) {
-    const user = this.users.find((user) => user.id === id);
+  async getUserById(id) {
+    try {
+      const user = await this.db.oneOrNone("SELECT * FROM users WHERE id = $1", id);
     return user;
+    } catch (error) {
+      console.log(`Failed to get user by id ${id}: `, error);
+      throw error;
+    }
   }
 
-  getUserByEmail(email) {
-    const user = this.users.find((user) => user.email === email);
+  async getUserByEmail(email) {
+    try {
+      const user = await this.db.oneOrNone("SELECT * FROM users WHERE email = $1", email);
     return user;
+    } catch (error) {
+      console.log(`Failed to get user by email ${email}: `, error);
+      throw error;
+    }
   }
 
-  createUser(user) {
-    this.users.push(user);
+  async createUser(user) {
+    try {
+      await this.db.none("INSERT INTO users (id, name, email, password) VALUES ($1, $2, $3, $4)",
+    [user.id, user.name, user.email, user.password]
+    );
     return user;
+    } catch (error) {
+      console.log(`Failed to create user ${user}: `, error);
+      throw error;
+    }
   }
 
-  updateUser(id, name, email, password) {
-    const user = this.getUserById(id);
+  async updateUser(id, name, email, password) {
+    try {
+      const user = this.getUserById(id);
 
     if (!user) {
       return null;
     }
 
-    user.name = name;
-    user.email = email;
-    user.password = password;
+    const updateUser = await this.db.one("UPDATE users SET name = $1, email = $2, password = $3 WHERE id = $4 RETURNING *",
+    [name, email, password, id]
+    );
 
-    return user;
+    return updateUser;
+    } catch (error) {
+      console.log(`Failed to update user ${id, name}: `, error);
+      throw error;
+    }
   }
 
-  deleteUser(id) {
-    this.users = this.users.filter((user) => user.id !== id);
+  async deleteUser(id) {
+    try {
+      await this.db.none("DELETE FROM users WHERE id = $1", id);
+    } catch (error) {
+      console.log(`Failed to delete user ${id}: `, error);
+      throw error;
+    }
   }
 }
